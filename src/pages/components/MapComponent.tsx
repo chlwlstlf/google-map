@@ -1,62 +1,61 @@
-import { useEffect, useRef, useState } from "react";
-import { Loader } from "@googlemaps/js-api-loader";
+import { AdvancedMarker, APIProvider, Map, useMap } from "@vis.gl/react-google-maps";
+import { useCallback } from "react";
+
+const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY as string;
+const MAP_ID = "c73da83ccb7bf5d2c7528326";
+
+const locations = [
+  { lat: 37.567, lng: 126.979 },
+  { lat: 37.565, lng: 126.977 },
+  { lat: 37.5796, lng: 126.977 }, // 경복궁
+  { lat: 37.5512, lng: 126.988 }, // 남산서울타워
+  { lat: 37.5215, lng: 127.103 }, // 롯데월드
+  { lat: 37.5118, lng: 127.0593 }, // 코엑스
+  { lat: 37.5636, lng: 126.9829 }, // 명동
+];
 
 const MapComponent = () => {
-  // HTML 요소를 참조하는 useRef에 타입을 명시합니다.
-  const mapDivRef = useRef<HTMLDivElement | null>(null);
-
-  // 지도 객체 또는 null 타입을 허용하도록 useState에 타입을 명시합니다.
-  const [map, setMap] = useState<google.maps.Map | null>(null);
-
-  useEffect(() => {
-    const loader = new Loader({
-      apiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY as string,
-      version: "weekly",
-      // 지도를 띄우고 마커를 바로 찍어야 하므로 두 라이브러리를 함께 로드합니다.
-      libraries: ["maps", "marker"],
-    });
-
-    loader.load().then(() => {
-      const google = window.google;
-
-      if (mapDivRef.current) {
-        const newMap = new google.maps.Map(mapDivRef.current, {
-          center: { lat: 37.5665, lng: 126.978 },
-          zoom: 15,
-        });
-        setMap(newMap);
-
-        addMarkers(newMap);
-      }
-    });
-  }, []);
-
-  const addMarkers = (mapInstance: google.maps.Map) => {
-    const locations = [
-      // 46개의 마커 데이터 (예시)
-      { lat: 37.567, lng: 126.979 },
-      { lat: 37.565, lng: 126.977 },
-      // ... 44개 더 추가
-    ];
-
-    locations.forEach((location) => {
-      // 최신 API인 AdvancedMarkerElement를 사용합니다.
-      new google.maps.marker.AdvancedMarkerElement({
-        position: location,
-        map: mapInstance,
-      });
-    });
-  };
+  const defaultCenter = { lat: 37.5665, lng: 126.978 };
+  const defaultZoom = 12;
 
   return (
-    <div
-      ref={mapDivRef}
-      style={{
-        width: "100%",
-        height: "500px",
-        border: "1px solid #ccc",
-      }}
-    />
+    <div style={{ width: "100%", height: "500px" }}>
+      <APIProvider apiKey={GOOGLE_MAPS_API_KEY}>
+        <Map
+          defaultCenter={defaultCenter}
+          defaultZoom={defaultZoom}
+          mapId={MAP_ID}
+        >
+          <MarkerClickHandler />
+        </Map>
+      </APIProvider>
+    </div>
+  );
+};
+
+const MarkerClickHandler = () => {
+  const map = useMap();
+
+  const handleClick = useCallback(
+    (ev: google.maps.MapMouseEvent) => {
+      if (!map || !ev.latLng) return;
+      map.panTo(ev.latLng);
+      console.log("마커가 클릭되었습니다:", ev.latLng.toString());
+    },
+    [map]
+  );
+
+  return (
+    <>
+      {locations.map((location, index) => (
+        <AdvancedMarker
+          key={index}
+          position={location}
+          onClick={handleClick}
+          clickable={true}
+        />
+      ))}
+    </>
   );
 };
 
